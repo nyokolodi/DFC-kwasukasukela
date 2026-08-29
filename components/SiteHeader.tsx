@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function SiteHeader(){return <header className="nav"><div className="shell navin"><Link href="/" className="brand">Digital <span>Fire</span> Circle</Link><nav className="navlinks"><Link href="/stories">Stories</Link><Link href="/circles">Fire Circles</Link><Link href="/elder">Elders</Link><Link href="/family">Family</Link><Link href="/manager">Admin</Link><Link href="/login" className="btn">Sign in</Link></nav></div></header>}
