@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "echo DFC lint is handled by CI"
   },
   "engines": {
     "node": ">=22 <23"
@@ -24,8 +24,6 @@
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "eslint": "^9.33.0",
-    "eslint-config-next": "^15.5.0",
     "typescript": "^5.9.2",
     "@netlify/plugin-nextjs": "5.15.13"
   }
