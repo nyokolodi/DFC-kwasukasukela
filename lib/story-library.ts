@@ -12,6 +12,7 @@ export type StoryCard = {
   age_max: number;
   themes: string[];
   moral_lesson: string | null;
+  historical_context?: string | null;
   access_level: string;
   status: string;
   published_at: string | null;
@@ -21,66 +22,34 @@ export type StoryCard = {
   cover_url: string | null;
 };
 
-export async function getPublishedStories(limit?: number): Promise<{
-  stories: StoryCard[];
-  error: string | null;
-}> {
+async function loadStories(baseQuery: any) {
   const db = await createClient();
+  const { data: rawStories, error: storyError } = await baseQuery;
 
-  const storyQuery = db
-    .from('stories')
-    .select(
-      'id,slug,title,original_title,summary,language_id,culture_id,storyteller_id,age_min,age_max,themes,moral_lesson,access_level,status,published_at',
-    )
-    .eq('status', 'published')
-    .order('published_at', { ascending: false });
+  if (storyError) return { stories: [] as StoryCard[], error: storyError.message };
+  const stories = rawStories ?? [];
+  if (!stories.length) return { stories: [] as StoryCard[], error: null };
 
-  const { data: rawStories, error: storyError } = await storyQuery;
-  if (storyError) {
-    return { stories: [], error: storyError.message };
-  }
-
-  const stories = (rawStories ?? []).slice(0, limit ?? rawStories?.length ?? 0);
-
-  if (stories.length === 0) {
-    return { stories: [], error: null };
-  }
-
-  const languageIds = [...new Set(stories.map((s) => s.language_id).filter(Boolean))];
-  const cultureIds = [...new Set(stories.map((s) => s.culture_id).filter(Boolean))];
-  const storytellerIds = [...new Set(stories.map((s) => s.storyteller_id).filter(Boolean))];
-  const storyIds = stories.map((s) => s.id);
+  const languageIds = [...new Set(stories.map((s: any) => s.language_id).filter(Boolean))];
+  const cultureIds = [...new Set(stories.map((s: any) => s.culture_id).filter(Boolean))];
+  const storytellerIds = [...new Set(stories.map((s: any) => s.storyteller_id).filter(Boolean))];
+  const storyIds = stories.map((s: any) => s.id);
 
   const [{ data: languages }, { data: cultures }, { data: storytellers }, { data: audio }] =
     await Promise.all([
-      languageIds.length
-        ? db.from('languages').select('id,name').in('id', languageIds)
-        : Promise.resolve({ data: [] }),
-      cultureIds.length
-        ? db.from('cultures').select('id,name').in('id', cultureIds)
-        : Promise.resolve({ data: [] }),
-      storytellerIds.length
-        ? db.from('storyteller_profiles').select('id,public_name').in('id', storytellerIds)
-        : Promise.resolve({ data: [] }),
-      db
-        .from('story_audio_assets')
-        .select('story_id,duration_seconds,storage_path')
-        .in('story_id', storyIds)
-        .eq('variant', 'standard')
-        .eq('approved', true),
+      languageIds.length ? db.from('languages').select('id,name').in('id', languageIds) : Promise.resolve({ data: [] }),
+      cultureIds.length ? db.from('cultures').select('id,name').in('id', cultureIds) : Promise.resolve({ data: [] }),
+      storytellerIds.length ? db.from('storyteller_profiles').select('id,public_name').in('id', storytellerIds) : Promise.resolve({ data: [] }),
+      db.from('story_audio_assets').select('story_id,duration_seconds,storage_path').in('story_id', storyIds).eq('variant', 'standard').eq('approved', true),
     ]);
 
   const languageMap = new Map((languages ?? []).map((x: any) => [x.id, x.name]));
   const cultureMap = new Map((cultures ?? []).map((x: any) => [x.id, x.name]));
   const storytellerMap = new Map((storytellers ?? []).map((x: any) => [x.id, x.public_name]));
-  const audioMap = new Map(
-    (audio ?? []).map((x: any) => [
-      x.story_id,
-      { duration_seconds: x.duration_seconds ?? null, storage_path: x.storage_path ?? null },
-    ]),
-  );
+  const audioMap = new Map((audio ?? []).map((x: any) => [x.story_id, { duration_seconds: x.duration_seconds ?? null, storage_path: x.storage_path ?? null }]));
 
   return {
+    error: null,
     stories: stories.map((story: any) => {
       const audioAsset = audioMap.get(story.id);
       return {
@@ -95,6 +64,7 @@ export async function getPublishedStories(limit?: number): Promise<{
         age_max: story.age_max,
         themes: story.themes ?? [],
         moral_lesson: story.moral_lesson ?? null,
+        historical_context: story.historical_context ?? null,
         access_level: story.access_level,
         status: story.status,
         published_at: story.published_at ?? null,
@@ -102,8 +72,32 @@ export async function getPublishedStories(limit?: number): Promise<{
         duration_seconds: audioAsset?.duration_seconds ?? null,
         audio_path: audioAsset?.storage_path ?? null,
         cover_url: null,
-      };
+      } satisfies StoryCard;
     }),
-    error: null,
   };
+}
+
+export async function getPublishedStories(limit?: number) {
+  const db = await createClient();
+  const query = db
+    .from('stories')
+    .select('id,slug,title,original_title,summary,language_id,culture_id,storyteller_id,age_min,age_max,themes,moral_lesson,historical_context,access_level,status,published_at')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false });
+
+  return loadStories(limit ? query.limit(limit) : query);
+}
+
+export async function getPublishedStoryBySlug(slug: string) {
+  const db = await createClient();
+  const result = await loadStories(
+    db
+      .from('stories')
+      .select('id,slug,title,original_title,summary,language_id,culture_id,storyteller_id,age_min,age_max,themes,moral_lesson,historical_context,access_level,status,published_at')
+      .eq('status', 'published')
+      .eq('slug', slug)
+      .limit(1),
+  );
+
+  return { story: result.stories[0] ?? null, error: result.error };
 }
