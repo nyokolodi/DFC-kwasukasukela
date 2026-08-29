@@ -89,7 +89,7 @@ create policy progress_self on public.listening_progress for all using(exists(se
 create policy reports_insert on public.content_reports for insert with check(reporter_id=auth.uid());create policy reports_select on public.content_reports for select using(reporter_id=auth.uid() or public.is_staff());create policy reports_staff on public.content_reports for update using(public.is_staff()) with check(public.is_staff());
 create policy audit_staff on public.audit_log for select using(public.is_staff());create policy audit_insert on public.audit_log for insert with check(actor_id=auth.uid() or public.is_staff());
 
-create policy story_audio_storage_read on storage.objects for select using(bucket_id='story-audio-private' and auth.role()='authenticated');
+-- Private story audio is never directly readable by browser clients.\n-- The signed-URL Edge Function uses the service role after an entitlement check.
 create policy story_audio_storage_staff on storage.objects for all using(bucket_id='story-audio-private' and public.is_staff()) with check(bucket_id='story-audio-private' and public.is_staff());
 create policy covers_public on storage.objects for select using(bucket_id='story-covers');
 create policy covers_staff on storage.objects for all using(bucket_id='story-covers' and public.is_staff()) with check(bucket_id='story-covers' and public.is_staff());
