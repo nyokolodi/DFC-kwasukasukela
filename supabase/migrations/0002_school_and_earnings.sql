@@ -1,0 +1,22 @@
+create table public.schools(id uuid primary key default gen_random_uuid(),name text not null,address text,created_at timestamptz not null default now());
+create table public.school_memberships(school_id uuid references public.schools(id) on delete cascade,user_id uuid references public.profiles(id) on delete cascade,member_role text not null default 'teacher',active boolean not null default true,primary key(school_id,user_id));
+create table public.school_licences(id uuid primary key default gen_random_uuid(),school_id uuid not null references public.schools(id) on delete cascade,plan text not null,starts_at timestamptz not null,ends_at timestamptz,seat_limit int not null default 100,active boolean not null default true,created_at timestamptz not null default now());
+create table public.storyteller_earnings(id uuid primary key default gen_random_uuid(),storyteller_id uuid not null references public.storyteller_profiles(id),story_id uuid references public.stories(id),circle_id uuid references public.fire_circles(id),earning_type text not null,calculation_basis jsonb not null default '{}',gross_amount numeric(12,2) not null default 0,adjustment_amount numeric(12,2) not null default 0,net_amount numeric(12,2) generated always as (gross_amount+adjustment_amount) stored,status text not null default 'pending',created_at timestamptz not null default now());
+create table public.payouts(id uuid primary key default gen_random_uuid(),storyteller_id uuid not null references public.storyteller_profiles(id),amount numeric(12,2) not null,period_start date,period_end date,status text not null default 'pending',paid_at timestamptz,created_at timestamptz not null default now());
+
+alter table public.content_entitlements add column if not exists story_id uuid references public.stories(id) on delete cascade;
+alter table public.content_entitlements add column if not exists school_id uuid references public.schools(id) on delete cascade;
+
+create or replace function public.has_story_access(sid uuid,uid uuid default auth.uid()) returns boolean language sql stable security definer set search_path=public as $$select exists(select 1 from public.stories s where s.id=sid and s.status='published' and (s.access_level='public' or exists(select 1 from public.content_entitlements e where e.user_id=uid and e.active=true and (e.ends_at is null or e.ends_at>now()) and (e.story_id is null or e.story_id=sid)) or (s.access_level='school' and exists(select 1 from public.school_memberships m join public.school_licences l on l.school_id=m.school_id where m.user_id=uid and m.active=true and l.active=true and (l.ends_at is null or l.ends_at>now())))));$$;
+
+alter table public.schools enable row level security;alter table public.school_memberships enable row level security;alter table public.school_licences enable row level security;alter table public.storyteller_earnings enable row level security;alter table public.payouts enable row level security;
+create policy schools_select on public.schools for select using(public.is_staff() or exists(select 1 from public.school_memberships m where m.school_id=id and m.user_id=auth.uid()));
+create policy schools_staff on public.schools for all using(public.is_staff()) with check(public.is_staff());
+create policy school_memberships_select on public.school_memberships for select using(user_id=auth.uid() or public.is_staff());
+create policy school_memberships_staff on public.school_memberships for all using(public.is_staff()) with check(public.is_staff());
+create policy school_licences_select on public.school_licences for select using(public.is_staff() or exists(select 1 from public.school_memberships m where m.school_id=school_id and m.user_id=auth.uid()));
+create policy school_licences_staff on public.school_licences for all using(public.is_staff()) with check(public.is_staff());
+create policy earnings_staff_or_owner on public.storyteller_earnings for select using(public.is_staff() or exists(select 1 from public.storyteller_profiles t where t.id=storyteller_id and t.user_id=auth.uid()));
+create policy payouts_staff_or_owner on public.payouts for select using(public.is_staff() or exists(select 1 from public.storyteller_profiles t where t.id=storyteller_id and t.user_id=auth.uid()));
+create index school_membership_user_idx on public.school_memberships(user_id);
+create index earnings_storyteller_idx on public.storyteller_earnings(storyteller_id,created_at desc);
