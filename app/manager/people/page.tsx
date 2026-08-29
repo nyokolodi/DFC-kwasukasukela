@@ -7,8 +7,10 @@ const roles = [
   'school_admin','moderator','content_manager','finance_manager','platform_admin',
 ] as const;
 
+const accessRoles = ['platform_admin','moderator','content_manager','finance_manager','school_admin'] as const;
+
 export default async function People() {
-  const session = await requireRole(['platform_admin','moderator','content_manager','finance_manager','school_admin']);
+  const session = await requireRole([...accessRoles]);
   if (!session) redirect('/manager');
 
   const db = await createClient();
@@ -19,11 +21,21 @@ export default async function People() {
 
   async function changeRole(form: FormData) {
     'use server';
-    if (session.profile.role !== 'platform_admin') return;
-    const db = await createClient();
-    await db.from('profiles')
-      .update({ role: String(form.get('role')) })
-      .eq('id', String(form.get('id')));
+
+    const admin = await requireRole(['platform_admin']);
+    if (!admin) redirect('/manager');
+
+    const role = String(form.get('role') ?? '');
+    if (!(roles as readonly string[]).includes(role)) {
+      throw new Error('Invalid DFC role');
+    }
+
+    const { error } = await (await createClient())
+      .from('profiles')
+      .update({ role })
+      .eq('id', String(form.get('id') ?? ''));
+
+    if (error) throw error;
   }
 
   return (
