@@ -1,7 +1,10 @@
-project_id = "digital-fire-circle"
+project_id = "kmeinntwtbupbacxlzvd"
+
 [api]
 enabled = true
+
 [functions.create-story-stream-url]
 verify_jwt = false
+
 [functions.livekit-webhook]
 verify_jwt = false
