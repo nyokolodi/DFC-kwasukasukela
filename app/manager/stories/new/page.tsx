@@ -1,0 +1,2 @@
+import{redirect}from'next/navigation';import{requireRole}from'@/lib/auth';import StoryCreateForm from'@/components/StoryCreateForm';
+export default async function NewStory(){const s=await requireRole(['platform_admin','content_manager']);if(!s)redirect('/manager');return <section className="section shell"><div className="eyebrow">Archive operations</div><h1>Create a story</h1><p className="lead">Create metadata and optionally upload a standard audio recording. New stories start as drafts for human review.</p><StoryCreateForm/></section>}
