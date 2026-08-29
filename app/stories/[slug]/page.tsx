@@ -1,11 +1,10 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getPublishedStoryBySlug } from '@/lib/story-library';
 import StoryPlayer from '@/components/StoryPlayer';
 
 export default async function Story({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const db = await createClient();
-  const { data: story } = await db.from('story_catalog').select('*').eq('slug', slug).maybeSingle();
+  const { story } = await getPublishedStoryBySlug(slug);
 
   if (!story) notFound();
 
