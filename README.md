@@ -1,13 +1,13 @@
 # Digital Fire Circle
 
-DFC is an audio-first African storytelling and reading platform for families, elders, schools and cultural communities.
+DFC is an audio-first, people-first African storytelling and community platform for families, elders, schools and cultural communities.
 
 ## Production architecture
 
 - **Netlify** — Next.js web/PWA hosting
 - **Supabase** — PostgreSQL, Auth, Storage, RLS and Edge Functions
 - **LiveKit Cloud** — live Digital Fire Circle audio
-- **GitHub** — source control and automated build checks
+- **GitHub** — source control and automated deployment source
 
 **Vercel is not used.**
 
@@ -30,16 +30,11 @@ DFC is an audio-first African storytelling and reading platform for families, el
 - PWA installation/app-like mobile experience
 - Platform administrator console
 
-## Supabase database
+## Supabase production source of truth
 
-Run these SQL migrations in order in the DFC Supabase project:
+The production project is `kmeinntwtbupbacxlzvd`. The repository's `supabase/migrations/` history is timestamped to match the migrations already applied to production. Do not re-introduce the obsolete `0001_dfc.sql`–`0007_*.sql` migration files.
 
-1. `supabase/migrations/0001_dfc.sql`
-2. `supabase/migrations/0002_school_and_earnings.sql`
-3. `supabase/migrations/0003_platform_operations.sql`
-4. `supabase/seed.sql`
-
-The migrations create the DFC schema, security policies, storage buckets, school/licensing foundations, revenue tables, rights/consent records and starter data.
+New database changes must be added as new timestamped migrations after `20260829142514` and pushed through GitHub. The Supabase GitHub integration is configured to deploy `main` to production.
 
 ## First administrator
 
@@ -55,8 +50,6 @@ where id=(
 ```
 
 After changing the role, sign out and sign in again.
-
-Platform administrators can manage people, roles, stories, audio approvals, publication, storytellers, circles and moderation.
 
 ## Netlify
 
@@ -95,32 +88,16 @@ Functions in `supabase/functions/` include:
 - `create-story-stream-url` — checks story access and issues a short-lived private audio URL
 - `livekit-webhook` — records Fire Circle attendance from verified LiveKit events
 
-Configure required server secrets inside Supabase Edge Functions.
+## Health check
 
-## PWA
-
-DFC includes:
-
-- web manifest
-- installable home-screen experience
-- standalone display
-- service worker
-- responsive mobile layout
-- protected routes excluded from generic caching
-
-This is intentionally a web app for the pilot. No native Android/iOS build is required.
-
-## Security model
-
-The platform uses database-side role enforcement and Row Level Security. Client users cannot simply promote their own role. Private story audio is not directly readable from browser Storage policies; access is mediated through the signed-URL function.
+`/api/health` verifies that the Next.js server can reach the production `story_catalog` and reports whether LiveKit server configuration is present without exposing secrets.
 
 ## Development
 
-Use Node 22 and npm 10 locally. Run:
+Use Node 22 and npm 10 locally:
 
 ```text
 npm install
 npm run build
 npm run dev
 ```
-
