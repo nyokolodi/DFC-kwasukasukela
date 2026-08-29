@@ -3,8 +3,11 @@ import { redirect } from 'next/navigation';
 import { requireRole } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
+const pageRoles = ['platform_admin','moderator','content_manager'] as const;
+const publishRoles = ['platform_admin','content_manager'] as const;
+
 export default async function StoryOps() {
-  const session = await requireRole(['platform_admin','moderator','content_manager']);
+  const session = await requireRole([...pageRoles]);
   if (!session) redirect('/manager');
 
   const db = await createClient();
@@ -14,11 +17,15 @@ export default async function StoryOps() {
 
   async function action(form: FormData) {
     'use server';
-    const db = await createClient();
-    const id = String(form.get('id'));
-    const actionName = String(form.get('action'));
 
-    if (actionName === 'publish' && ['platform_admin','content_manager'].includes(session.profile.role)) {
+    const staff = await requireRole([...pageRoles]);
+    if (!staff) redirect('/manager');
+
+    const id = String(form.get('id') ?? '');
+    const actionName = String(form.get('action') ?? '');
+    const db = await createClient();
+
+    if (actionName === 'publish' && (publishRoles as readonly string[]).includes(staff.profile.role)) {
       const { data: asset } = await db.from('story_audio_assets')
         .select('id')
         .eq('story_id', id)
@@ -27,17 +34,21 @@ export default async function StoryOps() {
         .maybeSingle();
 
       if (asset) {
-        await db.from('stories')
+        const { error } = await db.from('stories')
           .update({ status: 'published', published_at: new Date().toISOString() })
           .eq('id', id);
+
+        if (error) throw error;
       }
     }
 
-    if (actionName === 'approve_audio' && ['platform_admin','content_manager'].includes(session.profile.role)) {
-      await db.from('story_audio_assets')
+    if (actionName === 'approve_audio' && (publishRoles as readonly string[]).includes(staff.profile.role)) {
+      const { error } = await db.from('story_audio_assets')
         .update({ approved: true })
         .eq('story_id', id)
         .eq('variant', 'standard');
+
+      if (error) throw error;
     }
   }
 
