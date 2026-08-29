@@ -1,0 +1,3 @@
+{
+  "name":"Digital Fire Circle","short_name":"Fire Circle","start_url":"/","display":"standalone","background_color":"#140f0b","theme_color":"#c36b32","description":"African storytelling, reading and cultural connection.","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
