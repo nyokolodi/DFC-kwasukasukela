@@ -1,0 +1,1 @@
+import{NextResponse}from'next/server';export async function GET(){return NextResponse.json({ok:true,service:'digital-fire-circle',timestamp:new Date().toISOString()})}
