@@ -1,0 +1,1 @@
+{"imports":{"supabase":"npm:@supabase/supabase-js@2","livekit":"npm:livekit-server-sdk@2"}}
