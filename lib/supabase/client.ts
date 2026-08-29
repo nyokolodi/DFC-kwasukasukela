@@ -1,19 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
-
-function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    throw new Error(
-      'DFC Supabase configuration is missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
-    );
-  }
-
-  return { url, key };
-}
+import { getSupabaseConfig } from '@/lib/supabase/config';
 
 export function createClient() {
   const { url, key } = getSupabaseConfig();
